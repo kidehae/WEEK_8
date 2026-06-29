@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+logs/
+*.session
+*.session-journal
+medical_warehouse/logs/
+medical_warehouse/target/
+/venv
