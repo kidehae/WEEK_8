@@ -1,0 +1,12 @@
+medical_warehouse:
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: postgresql
+      port: 5432
+      dbname: week_8
+      schema: analytics
+      threads: 4
+  target: dev
