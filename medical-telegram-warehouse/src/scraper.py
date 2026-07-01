@@ -12,8 +12,8 @@ logger = get_logger("TelegramScraper")
 
 # Define Target Channels assigned by target scope (Fixed CheMed handle)
 CHANNELS_TO_SCRAPE = [
-    "CheMed",            # Corrected public handle
-    "Lobeliacosmetics",  
+    "CheMed123",            # Corrected public handle
+    "lobelia4cosmetics",  
     "tikvahpharma"       
 ]
 
