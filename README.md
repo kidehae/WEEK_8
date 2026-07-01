@@ -1,145 +1,136 @@
+Markdown
+# Shipping a Data Product: From Raw Telegram Data to an Analytical API
 
-```markdown
-# Medical Telegram Warehouse (Data Engineering Pipeline)
-
-An end-to-end data engineering pipeline that scrapes medical, pharmaceutical, and cosmetics data from public Telegram channels, ingests the unstructured logs into a raw data lake, streams them into a PostgreSQL warehouse, and structures them into an analytical schema using dbt Core.
-
----
-
-## Project Architecture
-
-1. **Data Ingestion (Task 1):** A Python script using the Telethon library connects to the Telegram API to fetch raw text data and binary media assets from regional channels (`@CheMed`, `@Lobeliacosmetics`, and `@tikvahpharma`). Data is securely persisted into date-partitioned raw files (`data/raw/`).
-2. **Database Loading (Task 2 - Part A):** A custom Python script structures the JSON inputs and executes atomic bulk inserts into a staging schema within a PostgreSQL database instances.
-3. **Data Modeling (Task 2 - Part B):** dbt (Data Build Tool) builds compile-ready SQL workflows to transform raw staging tables into query-optimized Views and production Star-Schema Data Marts.
+An end-to-end medical data platform consultancy project for **Kara Solutions** (Ethiopia). This platform automates the extraction, loading, computer vision enrichment, modeling, transformation, and API exposure of pharmaceutical, cosmetic, and medical data scraped from public Ethiopian Telegram channels.
 
 ---
 
-## Directory Structure
+## 🏗️ System Architecture & Pipeline Flow
+
+The platform implements a modern, production-grade **ELT (Extract, Load, Transform)** framework orchestrated entirely as a unified asset dependency graph.
+
+1. **Extract & Load (Data Lake)**: Scrapes text and media binary payloads from target Telegram channels via Telethon, saving partitioned daily raw JSON documents.
+2. **Relational Ingestion (Raw DWH Layer)**: Accumulates raw lake metrics into an isolated PostgreSQL landing zone schema (`raw.telegram_messages`).
+3. **Computer Vision Enrichment (YOLOv8)**: Runs object-inferencing models across downloaded image feeds, classifying posts into target marketing categories (e.g., promotional vs. product display).
+4. **Data Modeling & Analytics (dbt Marts)**: Builds a modular, fully validated Dimensional Star Schema (Fact and Dimension tables) optimized for fast business intelligence queries.
+5. **Consumption Layer (FastAPI)**: Exposes analytical warehouse tables through validated, interactive REST endpoints.
+
+---
+
+## 📁 Project Structure
 
 ```text
 medical-telegram-warehouse/
-├── data/
-│   └── raw/
-│       ├── telegram_messages/   # Date-partitioned raw JSON files (YYYY-MM-DD)
-│       └── images/              # Downloaded binary image assets grouped by channel
-├── src/
-│   ├── scraper.py               # Telethon scraper script
-│   ├── load_to_postgres.py      # Bulk DB loader script
-│   └── utils.py                 # Core loggers and environment configuration utilities
-├── medical_warehouse/           # Complete dbt Core project workspace
-│   ├── dbt_project.yml          # Core execution and layer configurations
-│   ├── profiles.yml             # Local database target credentials mapping
-│   └── models/
-│       ├── staging/             # Cleaning, casting, and raw testing layer
-│       │   ├── schema.yml       # Source schemas and constraint tests
-│       │   └── stg_telegram_messages.sql
-│       └── marts/               # Final production fact and dimension models
-├── .env                         # Local environment configuration secrets
-└── requirements.txt             # Python dependency manifest
+├── api/                           # Task 4: FastAPI Consumption Layer
+│   ├── database.py                # SQLAlchemy DB session engine
+│   ├── main.py                    # Analytical API endpoints & SQL queries
+│   └── schemas.py                 # Pydantic request/response schemas
+├── data/                          # Distributed Data Lake Storage
+│   ├── raw/
+│   │   ├── images/                # Downloaded media categorized by channel
+│   │   └── telegram_messages/     # YYYY-MM-DD partitioned raw JSON feeds
+│   └── yolo_detections.csv        # Computer vision intermediate enrichment layer
+├── medical_warehouse/             # Task 2 & 3: dbt Dimensional Warehouse
+│   ├── dbt_project.yml            # dbt Project configurations
+│   ├── profiles.yml               # Warehouse connection targets
+│   ├── models/
+│   │   ├── staging/               # Raw cleaning, renaming, and type casting
+│   │   └── marts/                 # Dim & Fact tables (Star Schema layer)
+│   └── seeds/                     # YOLO vision seed target folder
+├── src/                           # Core Data Engineering Pipelines
+│   ├── scraper.py                 # Telethon async scraper engine
+│   ├── load_to_postgres.py        # High-performance bulk relational loader
+│   ├── yolo_detect.py             # YOLOv8 vision classification processor
+│   └── utils.py                   # Global system logging utility
+├── pipeline.py                    # Task 5: Dagster Orchestration Graph
+├── docker-compose.yml             # Containerized services orchestration
+├── Requirements.txt               # Main Python environment dependencies
+└── README.md                      # Platform documentation
+🛠️ Tech Stack & Core Tools
+Orchestration: Dagster (Asset-Based Lineage)
 
-```
+Transformation & Testing: dbt (Data Build Tool) with dbt-postgres
 
----
+Data Warehouse: PostgreSQL
 
-## Getting Started
+Computer Vision: Ultralytics YOLOv8 (Nano Network)
 
-### 1. Prerequisites & Environment Setup
+API Development: FastAPI + Uvicorn + SQLAlchemy + Pydantic
 
-Ensure you have Python 3.10+ and a local PostgreSQL instance installed.
+Scraping Interface: Telethon (Telegram MTProto API Client)
 
-Clone this repository, then create and activate a virtual environment:
+🚀 Setup and Installation
+1. Environment Configuration
+Clone the repository and set up a Python virtual environment:
 
-```bash
-# Create environment
+Bash
+git clone <your-repository-url>
+cd medical-telegram-warehouse
 python -m venv .venv
-
-# Activate environment (Git Bash / Linux)
-source .venv/Scripts/activate
-
-# Install dependencies
+source .venv/Scripts/activate  # On Windows: .venv\Scripts\Activate
 pip install -r requirements.txt
+2. Secrets & Environment Variables
+Create a .env file in the root directory to store database credentials and Telegram API access keys securely (do not commit this file):
 
-```
-
-### 2. Configuration (`.env`)
-
-Create a `.env` file in the root directory of your project to store local API configuration variables and database targets. **Do not omit the `TG_` prefix:**
-
-```ini
-TG_API_ID=31147898
-TG_API_HASH=dd742b907083f3f482e2a83a5b5f8753
-DB_USER=postgres
-DB_PASSWORD=postgresql
+Code snippet
+TG_API_ID=your_telegram_api_id
+TG_API_HASH=your_telegram_api_hash
 DB_HOST=localhost
 DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgresql
 DB_NAME=week_8
+🔄 Running the Core Pipeline Component Steps
+Step 1: Scrape Telegram Targets
+Fetches target public handle feeds (@CheMed_News, @LobeliaCosmetics, @tikvahpharma) and partitions records:
 
-```
-
----
-
-## Execution Pipeline
-
-### Step 1: Run the Telegram Scraper
-
-Execute the data lake collection script. On the initial execution, the terminal will safely ask for your international phone number (e.g., `+2519...`) and verification code to authenticate your session token.
-
-```bash
+Bash
 python src/scraper.py
+Step 2: Load to PostgreSQL Raw Schema
+Streams local data lake JSON dumps straight into the relational warehouse:
 
-```
-
-*This downloads the latest message records and writes files directly into your `data/raw/` path.*
-
-### Step 2: Ingest Raw Data into PostgreSQL
-
-Ensure your database instance (configured as `week_8`) exists inside PostgreSQL, then execute the bulk ingest loader:
-
-```bash
+Bash
 python src/load_to_postgres.py
+Step 3: Run YOLOv8 Object Classification
+Processes downloaded image directories and formats categories into an intermediate enrichment output:
 
-```
+Bash
+python src/yolo_detect.py
+Step 4: Run dbt Transformations
+Change directory into medical_warehouse/, initialize configurations, build seeds, and compile the entire dimensional star schema layer:
 
-*This creates the `raw` schema inside your database and transfers the JSON blocks directly into the `raw.telegram_messages` database table.*
-
-### Step 3: Run Data Modeling Transformations (dbt)
-
-Navigate into your dedicated dbt analytics workspace subfolder:
-
-```bash
+Bash
 cd medical_warehouse
-
-```
-
-Test your database connection profile handshake to make sure it can see your PostgreSQL warehouse configuration:
-
-```bash
-dbt debug --profiles-dir .
-
-```
-
-If the checks pass cleanly, execute your data cleaning transformation logic to build your analytics-ready Views:
-
-```bash
+dbt seed --profiles-dir .
 dbt run --profiles-dir .
-
-```
-
-To run structural data validation tests ensuring zero missing values or duplicate key constraints exist across keys:
-
-```bash
 dbt test --profiles-dir .
+🎛️ Unified Orchestration & Consumption Apps
+🏭 Automated Data Pipeline (Dagster UI)
+To launch the centralized asset orchestration engine and view the end-to-end data lineage graph:
 
-```
+Bash
+dagster dev -f pipeline.py
+Open your browser and navigate to http://localhost:3000 to inspect execution logs or trigger a unified materialization run.
 
----
+🌐 Serving Analytical Consumption Insights (FastAPI)
+To bring up the REST API layer providing insights on top products, channel activity metrics, and computer vision counts:
 
-## Data Transformation Rules (Staging Layer)
+Bash
+python -m uvicorn api.main:app --reload
+Navigate to http://127.0.0.1:8000/docs to access the fully interactive OpenAPI Swagger dashboard.
 
-The dbt transformation view handles a variety of data anomalies present within the primitive scraping logs:
+📊 Data Modeling: Warehouse Star Schema Design
+The data mart transforms structured messages and model classifications into an optimized analytical layout:
 
-* **Casting & Timestamps:** Explicitly converts varying incoming character dates into formal database `timestamp` fields.
-* **Missing Text Imputation:** Catches missing strings or empty messages using `coalesce` fallbacks.
-* **Metric Coercion:** Fallbacks all empty numeric rows for metric calculations (such as views count or total forward frequencies) cleanly to `0` to streamline aggregation functions.
+dim_channels: Aggregates macro stats, post volumes, and assigns operational business channel sectors.
 
-```
+dim_dates: Comprehensive time dimension supporting day, week, month, quarter, and weekend analytics filtering.
+
+fct_messages: Centralized operational fact tracking individual message details, views, forward volumes, and message lengths.
+
+fct_image_detections: Links the computer vision output to the core message metrics to identify visual engagement trends.
+
+📝 Authors & Contributors
+Meaza Mulatu — Lead Data Engineer (Kara Solutions Consulting Partner)
+
+Developed for 10 Academy: Week 8 Milestone Challenge (July 2026).
